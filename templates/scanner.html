@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block head %}
+    {% if type == 'qr' %}
+        <script src="https://unpkg.com/html5-qrcode"></script>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card" style="text-align: center;">
+    <h2>{{ 'QR Code' if type == 'qr' else 'Facial Recognition' }} Scanner</h2>
+    <p>Session: {{ session.course.course_code }} - {{ session.date }}</p>
+    
+    <div id="reader" style="width: 100%; max-width: 600px; margin: 2rem auto;"></div>
+    
+    {% if type == 'face' %}
+        <video id="video-preview" style="width: 100%; max-width: 600px; margin: 2rem auto; border-radius: 8px; border: 2px solid var(--primary);" autoplay></video>
+        <button id="capture-btn" class="btn btn-primary">Scan Face</button>
+        <canvas id="canvas" style="display:none;"></canvas>
+    {% endif %}
+
+    <div id="status-message" class="alert" style="display: none; margin-top: 1rem;"></div>
+</div>
+
+<script>
+    const type = "{{ type }}";
+    const sessionId = {{ session.id }};
+    const statusDiv = document.getElementById('status-message');
+    
+    function showMessage(msg, isSuccess) {
+        statusDiv.style.display = 'block';
+        statusDiv.textContent = msg;
+        statusDiv.className = isSuccess ? 'alert alert-success' : 'alert alert-danger';
+        setTimeout(() => statusDiv.style.display = 'none', 3000);
+    }
+
+    if (type === 'qr') {
+        let isProcessing = false;
+        function onScanSuccess(decodedText, decodedResult) {
+            if (isProcessing) return;
+            isProcessing = true;
+            
+            fetch("{{ url_for('main.api_mark_qr') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token: decodedText, session_id: sessionId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                showMessage(data.message, data.success);
+                setTimeout(() => isProcessing = false, 2000);
+            })
+            .catch(err => {
+                showMessage("Scan Error", false);
+                isProcessing = false;
+            });
+        }
+
+        const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+        html5QrcodeScanner.render(onScanSuccess);
+    } 
+    else if (type === 'face') {
+        const video = document.getElementById('video-preview');
+        const canvas = document.getElementById('canvas');
+        const captureBtn = document.getElementById('capture-btn');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => console.error("Error accessing webcam:", err));
+
+        captureBtn.addEventListener('click', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('image', blob, 'capture.jpg');
+                formData.append('session_id', sessionId);
+                
+                captureBtn.disabled = true;
+                captureBtn.textContent = 'Scanning...';
+
+                fetch("{{ url_for('main.api_mark_face') }}", {
+                    method: "POST",
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    showMessage(data.message, data.success);
+                    captureBtn.disabled = false;
+                    captureBtn.textContent = 'Scan Face';
+                })
+                .catch(err => {
+                    showMessage("Error scanning face", false);
+                    captureBtn.disabled = false;
+                    captureBtn.textContent = 'Scan Face';
+                });
+            }, 'image/jpeg');
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <h2>Admin Dashboard</h2>
+    <p>Manage users and courses here.</p>
+</div>
+
+<div class="grid">
+    <div class="card">
+        <h3>Users</h3>
+        <p>Total users: {{ users|length }}</p>
+        
+        <form action="{{ url_for('main.admin_dashboard') }}" method="POST" style="margin-top: 1rem; border: 1px solid #ddd; padding: 1rem; border-radius: 8px;">
+            <input type="hidden" name="action" value="add_user">
+            <h4>Add New User</h4>
+            <div class="grid" style="gap: 0.5rem;">
+                <input type="text" name="name" placeholder="Full Name" required>
+                <input type="text" name="username" placeholder="Username / Matric No" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <input type="text" name="department" placeholder="Department (Optional)">
+                <select name="role" required>
+                    <option value="student">Student</option>
+                    <option value="lecturer">Lecturer</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-secondary" style="margin-top: 1rem;">Add User</button>
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Username/Matric</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td>{{ u.name }}</td>
+                    <td><span style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">{{ u.role }}</span></td>
+                    <td>{{ u.username }}</td>
+                    <td>
+                        <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8em;">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>Courses</h3>
+        <p>Total courses: {{ courses|length }}</p>
+        
+        <form action="{{ url_for('main.admin_dashboard') }}" method="POST" style="margin-top: 1rem; border: 1px solid #ddd; padding: 1rem; border-radius: 8px;">
+            <input type="hidden" name="action" value="add_course">
+            <h4>Add New Course</h4>
+            <div class="grid" style="gap: 0.5rem;">
+                <input type="text" name="course_code" placeholder="Course Code (e.g. CS101)" required>
+                <input type="text" name="course_name" placeholder="Course Name" required>
+                <select name="lecturer_id" required>
+                    <option value="">Select Lecturer</option>
+                    {% for l in lecturers %}
+                        <option value="{{ l.id }}">{{ l.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Add Course</button>
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Lecturer</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in courses %}
+                <tr>
+                    <td>{{ c.course_code }}</td>
+                    <td>{{ c.course_name }}</td>
+                    <td>{{ c.lecturer.name }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

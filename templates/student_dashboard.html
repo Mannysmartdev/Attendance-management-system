@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; gap: 2rem; align-items: center;">
+        {% if user.photo_path %}
+            <img src="{{ url_for('static', filename='uploads/' + user.photo_path) }}" alt="Profile Photo" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary);">
+        {% else %}
+            <div style="width: 100px; height: 100px; border-radius: 50%; background: #E5E7EB; border: 3px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #9CA3AF;">
+                {{ user.name[0] }}
+            </div>
+        {% endif %}
+        <div>
+            <h2>Student Dashboard</h2>
+            <p><strong>Name:</strong> {{ user.name }}</p>
+            <p><strong>Matric No:</strong> {{ user.username }}</p>
+            <p><strong>Department:</strong> {{ user.department }}</p>
+            
+            <form action="{{ url_for('main.student_dashboard') }}" method="POST" enctype="multipart/form-data" style="margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center;">
+                <input type="hidden" name="action" value="upload_photo">
+                <input type="file" name="photo" accept="image/*" required style="margin-bottom: 0; flex: 1;">
+                <button type="submit" class="btn btn-primary">Upload Face</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="grid">
+    <div class="card" style="text-align: center;">
+        <h3>My QR Code</h3>
+        {% if user.qr_code_path %}
+            <img src="{{ url_for('static', filename='qrcodes/' + user.qr_code_path) }}" alt="QR Code" style="max-width: 200px; margin: 1rem 0;">
+            <p class="text-muted">Present this code to the lecturer during class to mark attendance.</p>
+        {% else %}
+            <p class="text-muted" style="margin-bottom: 1rem;">You don't have a QR code yet.</p>
+        {% endif %}
+            <form action="{{ url_for('main.student_dashboard') }}" method="POST" style="margin-top: 1rem;">
+                <input type="hidden" name="action" value="generate_qr">
+                <button type="submit" class="btn btn-secondary">
+                    {{ 'Regenerate QR Code' if user.qr_code_path else 'Generate QR Code' }}
+                </button>
+            </form>
+    </div>
+
+    <div class="card">
+        <h3>My Attendance Records</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Date</th>
+                    <th>Method</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in attendances %}
+                <tr>
+                    <td>{{ a.session.course.course_code }}</td>
+                    <td>{{ a.session.date }}</td>
+                    <td>
+                        <span style="background: #D1FAE5; color: #065F46; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">
+                            {{ a.method }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

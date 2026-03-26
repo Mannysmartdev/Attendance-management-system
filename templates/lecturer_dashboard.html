@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <h2>Lecturer Dashboard</h2>
+    <p>Manage your courses and lecture sessions.</p>
+</div>
+
+<div class="grid">
+    <div class="card">
+        <h3>My Courses</h3>
+        {% if courses %}
+            <form action="{{ url_for('main.lecturer_dashboard') }}" method="POST" style="margin-bottom: 1rem; border: 1px solid #ddd; padding: 1rem; border-radius: 8px;">
+                <input type="hidden" name="action" value="add_session">
+                <h4>Create Session</h4>
+                <div class="grid" style="gap: 0.5rem; margin-top: 0.5rem;">
+                    <select name="course_id" required>
+                        {% for c in courses %}
+                            <option value="{{ c.id }}">{{ c.course_code }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="date" name="date" required>
+                    <input type="time" name="start_time" required>
+                    <input type="time" name="end_time" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Create Session</button>
+            </form>
+            <ul>
+                {% for c in courses %}
+                    <li style="margin-bottom: 0.5rem;">
+                        <strong>{{ c.course_code }}</strong> - {{ c.course_name }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted">No courses assigned yet.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3>Lecture Sessions</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sessions %}
+                <tr>
+                    <td>{{ s.course.course_code }}</td>
+                    <td>{{ s.date }}</td>
+                    <td>{{ s.start_time.strftime('%H:%M') }} - {{ s.end_time.strftime('%H:%M') }}</td>
+                    <td>
+                        <a href="{{ url_for('main.scanner', type='qr', session_id=s.id) }}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Scan QR</a>
+                        <a href="{{ url_for('main.scanner', type='face', session_id=s.id) }}" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Scan Face</a>
+                        <a href="{{ url_for('main.download_report', session_id=s.id) }}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; border: 1px solid #ddd;">Report</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
