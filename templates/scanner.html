@@ -10,15 +10,17 @@
     <h2>{{ 'QR Code' if type == 'qr' else 'Facial Recognition' }} Scanner</h2>
     <p>Session: {{ session.course.course_code }} - {{ session.date }}</p>
     
+    <!-- Status message moved to the top -->
+    <div id="status-message" class="alert" style="display: none; margin-bottom: 1.5rem;"></div>
+    
     <div id="reader" style="width: 100%; max-width: 600px; margin: 2rem auto;"></div>
     
     {% if type == 'face' %}
-        <video id="video-preview" style="width: 100%; max-width: 600px; margin: 2rem auto; border-radius: 8px; border: 2px solid var(--primary);" autoplay></video>
+        <!-- Reduced size and made the video shape circular for face capture -->
+        <video id="video-preview" style="width: 100%; max-width: 320px; height: 320px; object-fit: cover; margin: 0 auto 1.5rem auto; border-radius: 50%; border: 4px solid var(--primary); display: block;" autoplay></video>
         <button id="capture-btn" class="btn btn-primary">Scan Face</button>
         <canvas id="canvas" style="display:none;"></canvas>
     {% endif %}
-
-    <div id="status-message" class="alert" style="display: none; margin-top: 1rem;"></div>
 </div>
 
 <script>
@@ -89,6 +91,12 @@
                     showMessage(data.message, data.success);
                     captureBtn.disabled = false;
                     captureBtn.textContent = 'Scan Face';
+                    
+                    if (data.success) {
+                        setTimeout(() => {
+                            window.location.href = "{{ url_for('main.lecturer_dashboard') }}";
+                        }, 2000);
+                    }
                 })
                 .catch(err => {
                     showMessage("Error scanning face", false);

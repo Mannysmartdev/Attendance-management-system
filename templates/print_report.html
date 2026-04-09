@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Report - {{ session.course.course_code }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; color: #333; }
+        h1, h2, h3 { color: #333; margin-bottom: 0.5rem; }
+        .header { border-bottom: 2px solid #ccc; padding-bottom: 1rem; margin-bottom: 2rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; }
+        }
+        .btn {
+            padding: 0.5rem 1rem; background-color: #0d6efd; color: white;
+            border: none; border-radius: 4px; cursor: pointer; text-decoration: none;
+            display: inline-block; margin-bottom: 1rem; font-size: 1rem;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom: 1rem;">
+        <button onclick="window.print()" class="btn">Print Report</button>
+        <a href="{{ url_for('main.lecturer_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+
+    <div class="header">
+        <h1 style="text-align: center;">Attendance Report</h1>
+        <h2>Course: {{ session.course.course_code }} - {{ session.course.course_name }}</h2>
+        <h3>Date: {{ session.date }}</h3>
+        <h3>Time: {{ session.start_time.strftime('%H:%M') }} - {{ session.end_time.strftime('%H:%M') }}</h3>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>S/N</th>
+                <th>Name</th>
+                <th>Matric Number</th>
+                <th>Department</th>
+                <th>Method</th>
+                <th>Time Marked</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for att in attendances %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ att.student.name }}</td>
+                <td>{{ att.student.username }}</td>
+                <td>{{ att.student.department or 'N/A' }}</td>
+                <td>{{ att.method }}</td>
+                <td>{{ att.timestamp.strftime('%H:%M:%S') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center;">No attendance records found for this session.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

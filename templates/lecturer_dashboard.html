@@ -56,7 +56,9 @@
                     <td>
                         <a href="{{ url_for('main.scanner', type='qr', session_id=s.id) }}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Scan QR</a>
                         <a href="{{ url_for('main.scanner', type='face', session_id=s.id) }}" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Scan Face</a>
-                        <a href="{{ url_for('main.download_report', session_id=s.id) }}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; border: 1px solid #ddd;">Report</a>
+                        <a href="{{ url_for('main.view_attendance', session_id=s.id) }}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background-color: #17a2b8; color: white; border: none;">View</a>
+                        <a href="{{ url_for('main.download_report', session_id=s.id) }}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; border: 1px solid #ddd;">CSV</a>
+                        <a href="{{ url_for('main.print_report', session_id=s.id) }}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; border: 1px solid #17a2b8; color: #17a2b8;">Print</a>
                     </td>
                 </tr>
                 {% endfor %}

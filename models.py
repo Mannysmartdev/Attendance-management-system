@@ -20,8 +20,8 @@ class User(db.Model, UserMixin):
     qr_code_path = db.Column(db.String(200), nullable=True)
     
     # Relationships
-    courses = db.relationship('Course', backref='lecturer', lazy=True)
-    attendances = db.relationship('Attendance', backref='student', lazy=True)
+    courses = db.relationship('Course', backref='lecturer', cascade="all, delete-orphan", lazy=True)
+    attendances = db.relationship('Attendance', backref='student', cascade="all, delete-orphan", lazy=True)
 
 class Course(db.Model):
     __tablename__ = 'courses'

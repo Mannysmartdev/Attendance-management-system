@@ -17,6 +17,17 @@ def generate_face_encoding(image_path):
         return encodings[0]
     return None
 
+def get_face_encodings(frame_rgb):
+    """
+    Extracts face encodings from a live frame.
+    Returns a list of encodings (empty if no faces found).
+    """
+    face_locations = face_recognition.face_locations(frame_rgb)
+    if not face_locations:
+        return []
+        
+    return face_recognition.face_encodings(frame_rgb, face_locations)
+
 def match_face(known_encoding, frame_rgb, tolerance=0.6):
     """
     Compares a live frame against a known encoding.

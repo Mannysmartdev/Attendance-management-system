@@ -99,6 +99,25 @@ def admin_dashboard():
             db.session.commit()
             flash('Course added!', 'success')
             
+        elif action == 'delete_user':
+            user_id = request.form.get('user_id')
+            user_to_delete = User.query.get(user_id)
+            if user_to_delete:
+                if user_to_delete.id != current_user.id:
+                    db.session.delete(user_to_delete)
+                    db.session.commit()
+                    flash(f'User {user_to_delete.name} deleted successfully!', 'success')
+                else:
+                    flash('You cannot delete yourself!', 'danger')
+                    
+        elif action == 'delete_course':
+            course_id = request.form.get('course_id')
+            course_to_delete = Course.query.get(course_id)
+            if course_to_delete:
+                db.session.delete(course_to_delete)
+                db.session.commit()
+                flash(f'Course {course_to_delete.course_code} deleted successfully!', 'success')
+            
     users = User.query.all()
     courses = Course.query.all()
     lecturers = User.query.filter_by(role='lecturer').all()
@@ -231,16 +250,35 @@ def api_mark_face():
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     
+    # Extract face encodings from the webcam frame ONCE
+    live_encodings = face_utils.get_face_encodings(rgb_frame)
+    if not live_encodings:
+        return jsonify({'success': False, 'message': 'No face found in the image'})
+        
+    # Use the first face found in the frame
+    live_encoding = live_encodings[0]
+
     # Get all students with face encodings
     students = User.query.filter(User.role == 'student', User.face_encoding.isnot(None)).all()
+    if not students:
+        return jsonify({'success': False, 'message': 'No registered student faces available'})
     
-    matched_student = None
+    known_encodings = []
+    student_list = []
     for student in students:
-        import numpy as np
         encoding = np.array(json.loads(student.face_encoding))
-        if face_utils.match_face(encoding, rgb_frame):
-            matched_student = student
-            break
+        known_encodings.append(encoding)
+        student_list.append(student)
+        
+    matched_student = None
+    if known_encodings:
+        import face_recognition
+        face_distances = face_recognition.face_distance(known_encodings, live_encoding)
+        best_match_index = np.argmin(face_distances)
+        
+        # Use a tolerance (smaller is stricter)
+        if face_distances[best_match_index] <= 0.5:
+            matched_student = student_list[best_match_index]
             
     if matched_student:
         # Check duplicate
@@ -274,3 +312,25 @@ def download_report(session_id):
     output = Response(si.getvalue(), mimetype='text/csv')
     output.headers["Content-Disposition"] = f"attachment; filename=attendance_session_{session_id}.csv"
     return output
+
+@main.route('/print_report/<int:session_id>')
+@login_required
+def print_report(session_id):
+    if current_user.role != 'lecturer' and current_user.role != 'admin':
+        return redirect(url_for('main.login'))
+        
+    session = Session.query.get_or_404(session_id)
+    attendances = session.attendances
+    
+    return render_template('print_report.html', session=session, attendances=attendances)
+
+@main.route('/view_attendance/<int:session_id>')
+@login_required
+def view_attendance(session_id):
+    if current_user.role != 'lecturer' and current_user.role != 'admin':
+        return redirect(url_for('main.login'))
+        
+    session = Session.query.get_or_404(session_id)
+    attendances = session.attendances
+    
+    return render_template('view_attendance.html', session=session, attendances=attendances)

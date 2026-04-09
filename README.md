@@ -7,7 +7,9 @@ This web application allows lecturers to mark student attendance automatically u
 - **Role-based Dashboards**: Admin, Lecturer, and Student accounts.
 - **Course & Session Management**: Lecturers can create lectures/sessions for their assigned courses.
 - **QR Code Attendance**: Students generate a unique QR code which is scanned by the Lecturer's device webcam (`html5-qrcode`).
-- **Facial Recognition Attendance**: Students upload a photo containing their face. The system generates a 128-d face encoding. The Lecturer's device webcam captures frames in-browser, sends them to the backend, and the backend verifies the face against the course students (`face_recognition` / OpenCV).
+- **Facial Recognition Attendance**: Students upload a photo containing their face. The system generates a 128-d face encoding. The Lecturer's device webcam captures frames in-browser, sends them to the backend, and the backend verifies the face against the course students using `face_recognition` and OpenCV.
+  - **Optimized Matching Engine**: Calculates high-accuracy best-match distances to quickly identify the exact face among all users preventing false positives and processing lag.
+  - **Refined Scanner UI**: Features a tailored circular camera UI, clearly visible alerts, and auto-redirects post-scan for a seamless user experience.
 - **Reports**: Lecturers and Admins can download a CSV report of attendance for any session.
 
 ## Output Structure

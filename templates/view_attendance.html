@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>Attendance List - {{ session.course.course_code }}</h2>
+        <div>
+            <a href="{{ url_for('main.lecturer_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+            <a href="{{ url_for('main.print_report', session_id=session.id) }}" class="btn btn-info">Print</a>
+        </div>
+    </div>
+    <div style="margin-bottom: 2rem;">
+        <p><strong>Course:</strong> {{ session.course.course_name }}</p>
+        <p><strong>Date:</strong> {{ session.date }}</p>
+        <p><strong>Time:</strong> {{ session.start_time.strftime('%H:%M') }} - {{ session.end_time.strftime('%H:%M') }}</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>S/N</th>
+                <th>Name</th>
+                <th>Matric Number</th>
+                <th>Department</th>
+                <th>Method</th>
+                <th>Time Marked</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for att in attendances %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ att.student.name }}</td>
+                <td>{{ att.student.username }}</td>
+                <td>{{ att.student.department or 'N/A' }}</td>
+                <td>{{ att.method }}</td>
+                <td>{{ att.timestamp.strftime('%H:%M:%S') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center;">No attendance records found for this session.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
