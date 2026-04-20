@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir setuptools wheel
+RUN pip install --no-cache-dir dlib-bin
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
