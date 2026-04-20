@@ -1,53 +1,57 @@
-import face_recognition
+from deepface import DeepFace
 import cv2
 import numpy as np
 
-def generate_face_encoding(image_path):
+def generate_face_encoding(image_path: str):
     """
-    Reads an image and generates a 128-d face encoding.
-    Returns the encoding array or None if no face is found.
+    Reads an image and generates a face embedding using DeepFace (Facenet).
+    Returns the embedding array or None if no face is found.
     """
-    # Load the image using face_recognition
-    image = face_recognition.load_image_file(image_path)
-    
-    # Find all face encodings in the image
-    encodings = face_recognition.face_encodings(image)
-    
-    if len(encodings) > 0:
-        return encodings[0]
-    return None
+    try:
+        result = DeepFace.represent(
+            img_path=image_path,
+            model_name="Facenet",
+            detector_backend="opencv",
+            enforce_detection=True
+        )
+        return np.array(result[0]["embedding"])
+    except Exception:
+        return None
 
 def get_face_encodings(frame_rgb):
     """
-    Extracts face encodings from a live frame.
+    Extracts face encodings from a live frame (RGB numpy array).
     Returns a list of encodings (empty if no faces found).
     """
-    face_locations = face_recognition.face_locations(frame_rgb)
-    if not face_locations:
+    try:
+        bgr_frame = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+        result = DeepFace.represent(
+            img_path=bgr_frame,
+            model_name="Facenet",
+            detector_backend="opencv",
+            enforce_detection=True
+        )
+        return [np.array(r["embedding"]) for r in result]
+    except Exception:
         return []
-        
-    return face_recognition.face_encodings(frame_rgb, face_locations)
 
 def match_face(known_encoding, frame_rgb, tolerance=0.6):
     """
-    Compares a live frame against a known encoding.
+    Compares a live frame against a known encoding using cosine distance.
     Returns True if a match is found.
     """
     if known_encoding is None:
         return False
-        
-    # Find face locations and encodings in the current frame
-    face_locations = face_recognition.face_locations(frame_rgb)
-    
-    if not face_locations:
+
+    encodings = get_face_encodings(frame_rgb)
+    if not encodings:
         return False
-        
-    face_encodings = face_recognition.face_encodings(frame_rgb, face_locations)
-    
-    # Compare each extracted face encoding against the known encoding
-    for face_encoding in face_encodings:
-        matches = face_recognition.compare_faces([known_encoding], face_encoding, tolerance=tolerance)
-        if matches[0]:
+
+    for encoding in encodings:
+        a = known_encoding
+        b = encoding
+        distance = 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+        if distance < tolerance:
             return True
-            
+
     return False

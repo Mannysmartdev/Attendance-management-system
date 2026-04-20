@@ -272,12 +272,12 @@ def api_mark_face():
         
     matched_student = None
     if known_encodings:
-        import face_recognition
-        face_distances = face_recognition.face_distance(known_encodings, live_encoding)
-        best_match_index = np.argmin(face_distances)
-        
-        # Use a tolerance (smaller is stricter)
-        if face_distances[best_match_index] <= 0.5:
+        def cosine_distance(a, b):
+            return 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+        distances = [cosine_distance(live_encoding, enc) for enc in known_encodings]
+        best_match_index = np.argmin(distances)
+        if distances[best_match_index] <= 0.4:
             matched_student = student_list[best_match_index]
             
     if matched_student:
