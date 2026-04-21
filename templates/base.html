@@ -3,36 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lecture Attendance System</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>{% block title %}AttendSys — Lecture Attendance System{% endblock %}</title>
+    <meta name="description" content="Smart facial recognition lecture attendance management system">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     {% block head %}{% endblock %}
 </head>
 <body>
-    <nav>
-        <a href="{{ url_for('main.login') }}">AttendSys</a>
-        <div class="nav-links">
-            {% if current_user.is_authenticated %}
-                <span>Welcome, {{ current_user.name }}</span>
-                <a href="{{ url_for('main.logout') }}">Logout</a>
+    <!-- Flash Messages (toast-style) -->
+    <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="bi bi-{% if category == 'success' %}check-circle-fill{% elif category == 'danger' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %}"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
             {% endif %}
-        </div>
-    </nav>
-    
-    <div class="container">
-        <div class="flash-messages">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        </div>
-        
+        {% endwith %}
+    </div>
+
+    {% block body %}
+    <!-- Default: Auth wrapper for login/register/standalone pages -->
+    <div class="auth-wrapper">
         {% block content %}{% endblock %}
     </div>
+    {% endblock %}
 </body>
 </html>

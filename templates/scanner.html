@@ -1,38 +1,94 @@
 {% extends "base.html" %}
+{% block title %}AttendSys — {{ 'QR Code' if type == 'qr' else 'Face Recognition' }} Scanner{% endblock %}
+
 {% block head %}
     {% if type == 'qr' %}
         <script src="https://unpkg.com/html5-qrcode"></script>
     {% endif %}
 {% endblock %}
 
-{% block content %}
-<div class="card" style="text-align: center;">
-    <h2>{{ 'QR Code' if type == 'qr' else 'Facial Recognition' }} Scanner</h2>
-    <p>Session: {{ session.course.course_code }} - {{ session.date }}</p>
-    
-    <!-- Status message moved to the top -->
-    <div id="status-message" class="alert" style="display: none; margin-bottom: 1.5rem;"></div>
-    
-    <div id="reader" style="width: 100%; max-width: 600px; margin: 2rem auto;"></div>
-    
-    {% if type == 'face' %}
-        <!-- Reduced size and made the video shape circular for face capture -->
-        <video id="video-preview" style="width: 100%; max-width: 320px; height: 320px; object-fit: cover; margin: 0 auto 1.5rem auto; border-radius: 50%; border: 4px solid var(--primary); display: block;" autoplay></video>
-        <button id="capture-btn" class="btn btn-primary">Scan Face</button>
-        <canvas id="canvas" style="display:none;"></canvas>
-    {% endif %}
+{% block body %}
+<div class="scanner-wrapper">
+    <!-- Back Button -->
+    <div style="position:fixed;top:1.25rem;left:1.25rem;z-index:10;">
+        <a href="{{ url_for('main.lecturer_dashboard') }}" class="btn btn-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Scanner Header -->
+    <div class="scanner-header" style="margin-top:2rem;">
+        <div style="display:inline-flex;align-items:center;gap:.65rem;margin-bottom:.5rem;">
+            {% if type == 'qr' %}
+                <i class="bi bi-qr-code-scan" style="font-size:1.8rem;color:var(--primary);"></i>
+            {% else %}
+                <i class="bi bi-camera-video-fill" style="font-size:1.8rem;color:var(--cyan);"></i>
+            {% endif %}
+            <h1 class="gradient-text" style="font-size:1.6rem;">{{ 'QR Code' if type == 'qr' else 'Facial Recognition' }} Scanner</h1>
+        </div>
+        <p style="color:var(--text-secondary);font-size:.95rem;">
+            <strong style="color:var(--text-primary);">{{ session.course.course_code }}</strong> — {{ session.course.course_name }}
+            &nbsp;·&nbsp; {{ session.date }}
+            &nbsp;·&nbsp; {{ session.start_time.strftime('%H:%M') }} – {{ session.end_time.strftime('%H:%M') }}
+        </p>
+    </div>
+
+    <!-- Status Message -->
+    <div id="status-message" class="alert" style="display:none;max-width:500px;width:100%;margin-bottom:1.5rem;"></div>
+
+    <!-- Scanner Card -->
+    <div class="scanner-card">
+        {% if type == 'qr' %}
+            <div id="reader" style="width:100%;border-radius:var(--radius-md);overflow:hidden;"></div>
+        {% else %}
+            <div class="scanner-video-container">
+                <video id="video-preview" autoplay playsinline></video>
+                <div class="scan-ring"></div>
+            </div>
+            <div style="text-align:center;">
+                <button id="capture-btn" class="btn btn-primary" style="min-width:180px;">
+                    <i class="bi bi-camera-fill"></i> Scan Face
+                </button>
+                <p style="color:var(--text-muted);font-size:.82rem;margin-top:.75rem;">
+                    Position face clearly in the circle and click scan
+                </p>
+            </div>
+            <canvas id="canvas" style="display:none;"></canvas>
+        {% endif %}
+    </div>
+
+    <!-- Recognized students list -->
+    <div id="recognized-list" class="glass-card" style="max-width:560px;width:100%;margin-top:1.5rem;display:none;">
+        <div class="card-header">
+            <h3><i class="bi bi-check-circle-fill" style="color:var(--success);margin-right:.4rem;"></i> Recognized</h3>
+        </div>
+        <ul id="recognized-names" style="list-style:none;padding:0;"></ul>
+    </div>
 </div>
 
 <script>
     const type = "{{ type }}";
     const sessionId = {{ session.id }};
     const statusDiv = document.getElementById('status-message');
-    
+    const recognizedList = document.getElementById('recognized-list');
+    const recognizedNames = document.getElementById('recognized-names');
+
     function showMessage(msg, isSuccess) {
-        statusDiv.style.display = 'block';
-        statusDiv.textContent = msg;
+        statusDiv.style.display = 'flex';
+        statusDiv.innerHTML = `<i class="bi bi-${isSuccess ? 'check-circle-fill' : 'exclamation-triangle-fill'}"></i> ${msg}`;
         statusDiv.className = isSuccess ? 'alert alert-success' : 'alert alert-danger';
-        setTimeout(() => statusDiv.style.display = 'none', 3000);
+        statusDiv.style.animation = 'none';
+        statusDiv.offsetHeight; // trigger reflow
+        statusDiv.style.animation = 'fadeUp .3s ease-out';
+        setTimeout(() => statusDiv.style.display = 'none', 4000);
+    }
+
+    function addRecognized(name) {
+        recognizedList.style.display = 'block';
+        const li = document.createElement('li');
+        li.style.cssText = 'padding:.6rem .75rem;border-bottom:1px solid var(--border-glass);display:flex;align-items:center;gap:.5rem;color:var(--text-primary);font-size:.9rem;animation:fadeUp .3s ease-out;';
+        li.innerHTML = `<i class="bi bi-person-check-fill" style="color:var(--success);"></i> ${name}`;
+        recognizedNames.prepend(li);
     }
 
     if (type === 'qr') {
@@ -40,7 +96,7 @@
         function onScanSuccess(decodedText, decodedResult) {
             if (isProcessing) return;
             isProcessing = true;
-            
+
             fetch("{{ url_for('main.api_mark_qr') }}", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -49,6 +105,7 @@
             .then(res => res.json())
             .then(data => {
                 showMessage(data.message, data.success);
+                if (data.success) addRecognized(data.message.replace('Attendance marked for ', ''));
                 setTimeout(() => isProcessing = false, 2000);
             })
             .catch(err => {
@@ -59,7 +116,7 @@
 
         const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
         html5QrcodeScanner.render(onScanSuccess);
-    } 
+    }
     else if (type === 'face') {
         const video = document.getElementById('video-preview');
         const canvas = document.getElementById('canvas');
@@ -67,20 +124,23 @@
 
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => { video.srcObject = stream; })
-            .catch(err => console.error("Error accessing webcam:", err));
+            .catch(err => {
+                console.error("Error accessing webcam:", err);
+                showMessage("Could not access webcam. Please grant camera permission.", false);
+            });
 
         captureBtn.addEventListener('click', () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-            
+
             canvas.toBlob(blob => {
                 const formData = new FormData();
                 formData.append('image', blob, 'capture.jpg');
                 formData.append('session_id', sessionId);
-                
+
                 captureBtn.disabled = true;
-                captureBtn.textContent = 'Scanning...';
+                captureBtn.innerHTML = '<i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite;"></i> Scanning...';
 
                 fetch("{{ url_for('main.api_mark_face') }}", {
                     method: "POST",
@@ -90,18 +150,16 @@
                 .then(data => {
                     showMessage(data.message, data.success);
                     captureBtn.disabled = false;
-                    captureBtn.textContent = 'Scan Face';
-                    
+                    captureBtn.innerHTML = '<i class="bi bi-camera-fill"></i> Scan Face';
+
                     if (data.success) {
-                        setTimeout(() => {
-                            window.location.href = "{{ url_for('main.lecturer_dashboard') }}";
-                        }, 2000);
+                        addRecognized(data.message.replace('Attendance marked for ', ''));
                     }
                 })
                 .catch(err => {
                     showMessage("Error scanning face", false);
                     captureBtn.disabled = false;
-                    captureBtn.textContent = 'Scan Face';
+                    captureBtn.innerHTML = '<i class="bi bi-camera-fill"></i> Scan Face';
                 });
             }, 'image/jpeg');
         });

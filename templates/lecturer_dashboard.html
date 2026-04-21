@@ -1,69 +1,291 @@
 {% extends "base.html" %}
-{% block content %}
-<div class="card">
-    <h2>Lecturer Dashboard</h2>
-    <p>Manage your courses and lecture sessions.</p>
-</div>
+{% block title %}AttendSys — Lecturer Dashboard{% endblock %}
 
-<div class="grid">
-    <div class="card">
-        <h3>My Courses</h3>
-        {% if courses %}
-            <form action="{{ url_for('main.lecturer_dashboard') }}" method="POST" style="margin-bottom: 1rem; border: 1px solid #ddd; padding: 1rem; border-radius: 8px;">
-                <input type="hidden" name="action" value="add_session">
-                <h4>Create Session</h4>
-                <div class="grid" style="gap: 0.5rem; margin-top: 0.5rem;">
-                    <select name="course_id" required>
-                        {% for c in courses %}
-                            <option value="{{ c.id }}">{{ c.course_code }}</option>
-                        {% endfor %}
-                    </select>
-                    <input type="date" name="date" required>
-                    <input type="time" name="start_time" required>
-                    <input type="time" name="end_time" required>
+{% block body %}
+<div class="dashboard-layout">
+    <!-- ===== Sidebar ===== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="bi bi-mortarboard-fill"></i>
+                <span>AttendSys</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <span class="nav-label">Main</span>
+            <a href="#" class="nav-item active" data-tab="overview">
+                <i class="bi bi-grid-1x2-fill"></i><span>Overview</span>
+            </a>
+            <span class="nav-label">Lectures</span>
+            <a href="#" class="nav-item" data-tab="sessions">
+                <i class="bi bi-calendar-plus-fill"></i><span>Create Session</span>
+            </a>
+            <a href="#" class="nav-item" data-tab="history">
+                <i class="bi bi-clock-history"></i><span>Session History</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">{{ current_user.name[0] }}</div>
+                <div class="user-info">
+                    <span class="user-name">{{ current_user.name }}</span>
+                    <span class="user-role">Lecturer</span>
                 </div>
-                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Create Session</button>
-            </form>
-            <ul>
-                {% for c in courses %}
-                    <li style="margin-bottom: 0.5rem;">
-                        <strong>{{ c.course_code }}</strong> - {{ c.course_name }}
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="text-muted">No courses assigned yet.</p>
-        {% endif %}
-    </div>
+            </div>
+            <a href="{{ url_for('main.logout') }}" class="logout-btn" title="Log out">
+                <i class="bi bi-box-arrow-left"></i>
+            </a>
+        </div>
+    </aside>
 
-    <div class="card">
-        <h3>Lecture Sessions</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Course</th>
-                    <th>Date</th>
-                    <th>Time</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for s in sessions %}
-                <tr>
-                    <td>{{ s.course.course_code }}</td>
-                    <td>{{ s.date }}</td>
-                    <td>{{ s.start_time.strftime('%H:%M') }} - {{ s.end_time.strftime('%H:%M') }}</td>
-                    <td>
-                        <a href="{{ url_for('main.scanner', type='qr', session_id=s.id) }}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Scan QR</a>
-                        <a href="{{ url_for('main.scanner', type='face', session_id=s.id) }}" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Scan Face</a>
-                        <a href="{{ url_for('main.view_attendance', session_id=s.id) }}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background-color: #17a2b8; color: white; border: none;">View</a>
-                        <a href="{{ url_for('main.download_report', session_id=s.id) }}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; border: 1px solid #ddd;">CSV</a>
-                        <a href="{{ url_for('main.print_report', session_id=s.id) }}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; border: 1px solid #17a2b8; color: #17a2b8;">Print</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    <!-- ===== Main Content ===== -->
+    <main class="main-content">
+        <div class="topbar">
+            <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                <i class="bi bi-list"></i>
+            </button>
+            <h1 class="page-title">Lecturer Dashboard</h1>
+            <div class="topbar-right">
+                <span class="welcome-text">Welcome, {{ current_user.name }}</span>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        <div class="flash-messages" style="position:relative;top:auto;right:auto;max-width:100%;padding:1rem 2rem 0;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}" style="animation:fadeUp .3s ease-out;">
+                            <i class="bi bi-{% if category == 'success' %}check-circle-fill{% elif category == 'danger' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %}"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <div class="content-area">
+
+            <!-- ========== TAB: Overview ========== -->
+            <div class="tab-section active" data-tab="overview">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon indigo"><i class="bi bi-book-half"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-label">My Courses</div>
+                            <div class="stat-value">{{ courses|length }}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon cyan"><i class="bi bi-calendar-event-fill"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-label">Total Sessions</div>
+                            <div class="stat-value">{{ sessions|length }}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon emerald"><i class="bi bi-camera-video-fill"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-label">Recognition</div>
+                            <div class="stat-value gradient-text">Active</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Courses list -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3><i class="bi bi-journal-text" style="color:var(--primary);margin-right:.4rem;"></i> My Courses</h3>
+                    </div>
+                    {% if courses %}
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr><th>Code</th><th>Course Name</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for c in courses %}
+                                <tr>
+                                    <td style="color:var(--primary);font-weight:600;">{{ c.course_code }}</td>
+                                    <td style="color:var(--text-primary);">{{ c.course_name }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-journal-x"></i>
+                        <p>No courses assigned yet. Contact your administrator.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Recent sessions quick view -->
+                {% if sessions %}
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3><i class="bi bi-clock-history" style="color:var(--cyan);margin-right:.4rem;"></i> Recent Sessions</h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr><th>Course</th><th>Date</th><th>Time</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for s in sessions[:5] %}
+                                <tr>
+                                    <td style="color:var(--primary);font-weight:600;">{{ s.course.course_code }}</td>
+                                    <td style="color:var(--text-primary);">{{ s.date }}</td>
+                                    <td>{{ s.start_time.strftime('%H:%M') }} – {{ s.end_time.strftime('%H:%M') }}</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('main.scanner', type='face', session_id=s.id) }}" class="btn btn-primary btn-sm">
+                                                <i class="bi bi-camera-fill"></i> Face
+                                            </a>
+                                            <a href="{{ url_for('main.scanner', type='qr', session_id=s.id) }}" class="btn btn-outline btn-sm">
+                                                <i class="bi bi-qr-code-scan"></i> QR
+                                            </a>
+                                            <a href="{{ url_for('main.view_attendance', session_id=s.id) }}" class="btn btn-info btn-sm">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ========== TAB: Create Session ========== -->
+            <div class="tab-section" data-tab="sessions">
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3><i class="bi bi-calendar-plus" style="color:var(--primary);margin-right:.4rem;"></i> Create New Session</h3>
+                    </div>
+                    {% if courses %}
+                    <form action="{{ url_for('main.lecturer_dashboard') }}" method="POST">
+                        <input type="hidden" name="action" value="add_session">
+                        <div class="form-grid">
+                            <div>
+                                <label>Course</label>
+                                <select name="course_id" required>
+                                    {% for c in courses %}
+                                        <option value="{{ c.id }}">{{ c.course_code }} — {{ c.course_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label>Date</label>
+                                <input type="date" name="date" required>
+                            </div>
+                            <div>
+                                <label>Start Time</label>
+                                <input type="time" name="start_time" required>
+                            </div>
+                            <div>
+                                <label>End Time</label>
+                                <input type="time" name="end_time" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-2">
+                            <i class="bi bi-plus-lg"></i> Create Session
+                        </button>
+                    </form>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <p>No courses assigned. You need courses before creating sessions.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ========== TAB: Session History ========== -->
+            <div class="tab-section" data-tab="history">
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3><i class="bi bi-clock-history" style="color:var(--primary);margin-right:.4rem;"></i> All Sessions</h3>
+                        <span class="badge badge-lecturer" style="font-size:.8rem;">{{ sessions|length }} total</span>
+                    </div>
+                    {% if sessions %}
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Attended</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in sessions %}
+                                <tr>
+                                    <td style="color:var(--primary);font-weight:600;">{{ s.course.course_code }}</td>
+                                    <td style="color:var(--text-primary);">{{ s.date }}</td>
+                                    <td>{{ s.start_time.strftime('%H:%M') }} – {{ s.end_time.strftime('%H:%M') }}</td>
+                                    <td>
+                                        <span class="badge badge-present">{{ s.attendances|length }} student{{ 's' if s.attendances|length != 1 }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('main.scanner', type='face', session_id=s.id) }}" class="btn btn-primary btn-sm" title="Face Scan">
+                                                <i class="bi bi-camera-fill"></i> Face
+                                            </a>
+                                            <a href="{{ url_for('main.scanner', type='qr', session_id=s.id) }}" class="btn btn-outline btn-sm" title="QR Scan">
+                                                <i class="bi bi-qr-code-scan"></i> QR
+                                            </a>
+                                            <a href="{{ url_for('main.view_attendance', session_id=s.id) }}" class="btn btn-info btn-sm" title="View Attendance">
+                                                <i class="bi bi-eye-fill"></i> View
+                                            </a>
+                                            <a href="{{ url_for('main.download_report', session_id=s.id) }}" class="btn btn-success btn-sm" title="Download CSV">
+                                                <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+                                            </a>
+                                            <a href="{{ url_for('main.print_report', session_id=s.id) }}" class="btn btn-outline btn-sm" title="Print Report">
+                                                <i class="bi bi-printer"></i> Print
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-calendar-x"></i>
+                        <p>No sessions created yet. Create your first session above.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </main>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const navItems = document.querySelectorAll('.nav-item[data-tab]');
+    const sections = document.querySelectorAll('.tab-section');
+
+    navItems.forEach(item => {
+        item.addEventListener('click', e => {
+            e.preventDefault();
+            navItems.forEach(n => n.classList.remove('active'));
+            item.classList.add('active');
+            const target = item.getAttribute('data-tab');
+            sections.forEach(s => {
+                s.classList.toggle('active', s.getAttribute('data-tab') === target);
+            });
+            document.getElementById('sidebar').classList.remove('open');
+        });
+    });
+});
+</script>
 {% endblock %}

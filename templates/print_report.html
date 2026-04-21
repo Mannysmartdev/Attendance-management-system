@@ -3,39 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance Report - {{ session.course.course_code }}</title>
+    <title>Attendance Report — {{ session.course.course_code }} | {{ session.date }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; margin: 2rem; color: #333; }
-        h1, h2, h3 { color: #333; margin-bottom: 0.5rem; }
-        .header { border-bottom: 2px solid #ccc; padding-bottom: 1rem; margin-bottom: 2rem; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-        th { background-color: #f2f2f2; font-weight: bold; }
-        @media print {
-            .no-print { display: none !important; }
-            body { margin: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            color: #1e293b;
+            background: #f8fafc;
+            padding: 2rem;
+        }
+
+        .no-print-bar {
+            display: flex;
+            gap: .75rem;
+            margin-bottom: 2rem;
         }
         .btn {
-            padding: 0.5rem 1rem; background-color: #0d6efd; color: white;
-            border: none; border-radius: 4px; cursor: pointer; text-decoration: none;
-            display: inline-block; margin-bottom: 1rem; font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .6rem 1.2rem;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: .9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            transition: all .2s;
         }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #a78bfa);
+            color: #fff;
+        }
+        .btn-primary:hover { box-shadow: 0 4px 15px rgba(99,102,241,0.4); }
         .btn-secondary {
-            background-color: #6c757d;
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .btn-secondary:hover { background: #cbd5e1; }
+
+        .report-header {
+            text-align: center;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .report-header h1 {
+            font-size: 1.5rem;
+            color: #0f172a;
+            margin-bottom: .25rem;
+        }
+        .report-header h2 {
+            font-size: 1.15rem;
+            color: #334155;
+            font-weight: 500;
+            margin-bottom: .15rem;
+        }
+        .report-header h3 {
+            font-size: .95rem;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: .65rem .85rem;
+            text-align: left;
+            border: 1px solid #e2e8f0;
+            font-size: .88rem;
+        }
+        th {
+            background: #f1f5f9;
+            font-weight: 600;
+            color: #334155;
+        }
+        tr:nth-child(even) td { background: #fafbfc; }
+
+        .footer-note {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: .8rem;
+            color: #94a3b8;
+        }
+
+        @media print {
+            .no-print-bar { display: none !important; }
+            body { padding: 0; background: #fff; }
         }
     </style>
 </head>
 <body>
-    <div class="no-print" style="margin-bottom: 1rem;">
-        <button onclick="window.print()" class="btn">Print Report</button>
-        <a href="{{ url_for('main.lecturer_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    <div class="no-print-bar">
+        <button onclick="window.print()" class="btn btn-primary">
+            🖨️ Print Report
+        </button>
+        <a href="{{ url_for('main.lecturer_dashboard') }}" class="btn btn-secondary">
+            ← Back to Dashboard
+        </a>
     </div>
 
-    <div class="header">
-        <h1 style="text-align: center;">Attendance Report</h1>
-        <h2>Course: {{ session.course.course_code }} - {{ session.course.course_name }}</h2>
-        <h3>Date: {{ session.date }}</h3>
-        <h3>Time: {{ session.start_time.strftime('%H:%M') }} - {{ session.end_time.strftime('%H:%M') }}</h3>
+    <div class="report-header">
+        <h1>Attendance Report</h1>
+        <h2>{{ session.course.course_code }} — {{ session.course.course_name }}</h2>
+        <h3>Date: {{ session.date }} &nbsp;·&nbsp; Time: {{ session.start_time.strftime('%H:%M') }} – {{ session.end_time.strftime('%H:%M') }}</h3>
+        <p style="margin-top:.5rem;font-size:.85rem;color:#64748b;">Total Present: <strong style="color:#0f172a;">{{ attendances|length }}</strong></p>
     </div>
 
     <table>
@@ -61,10 +138,16 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="6" style="text-align: center;">No attendance records found for this session.</td>
+                <td colspan="6" style="text-align: center; color: #94a3b8; padding: 2rem;">
+                    No attendance records found for this session.
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <div class="footer-note">
+        Generated by AttendSys — Lecture Attendance Management System
+    </div>
 </body>
 </html>
