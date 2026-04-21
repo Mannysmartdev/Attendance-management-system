@@ -1,0 +1,21 @@
+# Virtual environment
+.venv/
+.venv_old/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Flask / environment variables
+.env
+instance/
+
+# PyCharm
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
