@@ -25,6 +25,9 @@ def login():
         user = User.query.filter_by(username=username).first()
         from app import bcrypt
         if user and bcrypt.check_password_hash(user.password, password):
+            if user.role == 'student':
+                flash('Student login is not available. Contact your lecturer or admin.', 'danger')
+                return render_template('login.html')
             login_user(user)
             flash('Login Successful!', 'success')
             return redirect(url_for(f'main.{user.role}_dashboard'))
@@ -146,10 +149,53 @@ def lecturer_dashboard():
             db.session.add(new_session)
             db.session.commit()
             flash('Session created!', 'success')
-            
+
+        elif action == 'add_student':
+            name = request.form.get('name')
+            username = request.form.get('username')
+            password = request.form.get('password')
+            dept = request.form.get('department')
+
+            existing = User.query.filter_by(username=username).first()
+            if existing:
+                flash('A user with that Matric Number already exists.', 'danger')
+            else:
+                from app import bcrypt
+                hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
+                new_student = User(username=username, password=hashed_pw, role='student', name=name, department=dept)
+                db.session.add(new_student)
+                db.session.commit()
+
+                # Handle optional photo upload for face encoding
+                if 'photo' in request.files and request.files['photo'].filename != '':
+                    file = request.files['photo']
+                    filename = secure_filename(f"student_{new_student.id}_{file.filename}")
+                    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                    file.save(filepath)
+
+                    encoding = face_utils.generate_face_encoding(filepath)
+                    if encoding is not None:
+                        new_student.photo_path = filename
+                        new_student.face_encoding = json.dumps(encoding.tolist())
+                        db.session.commit()
+                        flash(f'Student {name} registered with face enrolled!', 'success')
+                    else:
+                        flash(f'Student {name} registered but no face detected in photo.', 'warning')
+                else:
+                    flash(f'Student {name} registered successfully!', 'success')
+
+        elif action == 'delete_student':
+            student_id = request.form.get('student_id')
+            student = User.query.get(student_id)
+            if student and student.role == 'student':
+                db.session.delete(student)
+                db.session.commit()
+                flash(f'Student {student.name} deleted successfully!', 'success')
+
     courses = current_user.courses
     sessions = Session.query.join(Course).filter(Course.lecturer_id == current_user.id).order_by(Session.date.desc()).all()
-    return render_template('lecturer_dashboard.html', courses=courses, sessions=sessions)
+    students = User.query.filter_by(role='student').all()
+    return render_template('lecturer_dashboard.html', courses=courses, sessions=sessions, students=students)
 
 @main.route('/student', methods=['GET', 'POST'])
 @login_required
