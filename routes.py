@@ -95,8 +95,26 @@ def admin_dashboard():
             if role == 'student':
                 current_user.registered_students.append(new_user)
                 db.session.commit()
-                
-            flash(f'User {name} added!', 'success')
+
+                # Handle optional photo upload for face encoding
+                if 'photo' in request.files and request.files['photo'].filename != '':
+                    file = request.files['photo']
+                    filename = secure_filename(f"student_{new_user.id}_{file.filename}")
+                    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                    file.save(filepath)
+
+                    encoding = face_utils.generate_face_encoding(filepath)
+                    if encoding is not None:
+                        new_user.photo_path = filename
+                        new_user.face_encoding = json.dumps(encoding.tolist())
+                        db.session.commit()
+                        flash(f'Student {name} registered with face enrolled!', 'success')
+                    else:
+                        flash(f'Student {name} registered but no face detected.', 'warning')
+                else:
+                    flash(f'User {name} added!', 'success')
+            else:
+                flash(f'User {name} added!', 'success')
             
         elif action == 'add_course':
             code = request.form.get('course_code')

@@ -7,18 +7,27 @@ import os
 def generate_face_encoding(image_path: str):
     """
     Reads an image and generates a face embedding using DeepFace (Facenet).
+    Tries multiple detector backends (opencv, mtcnn, retinaface) to be robust against noise.
     Returns the embedding array or None if no face is found.
     """
-    try:
-        result = DeepFace.represent(
-            img_path=image_path,
-            model_name="Facenet",
-            detector_backend="opencv",
-            enforce_detection=True
-        )
-        return np.array(result[0]["embedding"])
-    except Exception:
-        return None
+    # Detectors ordered from fastest to most robust/accurate
+    detectors = ["opencv", "mtcnn", "retinaface"]
+    
+    for detector in detectors:
+        try:
+            result = DeepFace.represent(
+                img_path=image_path,
+                model_name="Facenet",
+                detector_backend=detector,
+                enforce_detection=True
+            )
+            if result and len(result) > 0:
+                return np.array(result[0]["embedding"])
+        except Exception:
+            # Fallback to next detector if current one fails
+            continue
+            
+    return None
 
 def get_face_encodings_from_frame(frame_bgr):
     """
@@ -35,13 +44,23 @@ def get_face_encodings_from_frame(frame_bgr):
         os.close(fd)
         cv2.imwrite(tmp_path, frame_bgr)
 
-        result = DeepFace.represent(
-            img_path=tmp_path,
-            model_name="Facenet",
-            detector_backend="opencv",
-            enforce_detection=True
-        )
-        return [np.array(r["embedding"]) for r in result]
+        # Detectors ordered from fastest to most robust/accurate
+        detectors = ["opencv", "mtcnn", "retinaface"]
+        
+        for detector in detectors:
+            try:
+                result = DeepFace.represent(
+                    img_path=tmp_path,
+                    model_name="Facenet",
+                    detector_backend=detector,
+                    enforce_detection=True
+                )
+                if result and len(result) > 0:
+                    return [np.array(r["embedding"]) for r in result]
+            except Exception:
+                continue
+                
+        return []
     except Exception:
         return []
     finally:
