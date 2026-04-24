@@ -123,8 +123,9 @@ def admin_dashboard():
             
     users = User.query.all()
     courses = Course.query.all()
-    lecturers = User.query.filter_by(role='lecturer').all()
-    return render_template('admin_dashboard.html', users=users, courses=courses, lecturers=lecturers)
+    lecturers = User.query.filter_by(role='lecturer').order_by(User.id.desc()).all()
+    students = User.query.filter_by(role='student').order_by(User.id.desc()).all()
+    return render_template('admin_dashboard.html', users=users, courses=courses, lecturers=lecturers, students=students)
 
 @main.route('/lecturer', methods=['GET', 'POST'])
 @login_required
