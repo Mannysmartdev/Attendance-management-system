@@ -18,6 +18,7 @@ class User(db.Model, UserMixin):
     photo_path = db.Column(db.String(200), nullable=True)
     face_encoding = db.Column(db.Text, nullable=True) # Store JSON string of 128-d array
     qr_code_path = db.Column(db.String(200), nullable=True)
+    registered_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     
     # Relationships
     courses = db.relationship('Course', backref='lecturer', cascade="all, delete-orphan", lazy=True)

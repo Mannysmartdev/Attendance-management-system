@@ -89,6 +89,8 @@ def admin_dashboard():
             from app import bcrypt
             hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
             new_user = User(username=username, password=hashed_pw, role=role, name=name, department=dept)
+            if role == 'student':
+                new_user.registered_by = current_user.id
             db.session.add(new_user)
             db.session.commit()
             flash(f'User {name} added!', 'success')
@@ -163,7 +165,7 @@ def lecturer_dashboard():
             else:
                 from app import bcrypt
                 hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
-                new_student = User(username=username, password=hashed_pw, role='student', name=name, department=dept)
+                new_student = User(username=username, password=hashed_pw, role='student', name=name, department=dept, registered_by=current_user.id)
                 db.session.add(new_student)
                 db.session.commit()
 
@@ -189,13 +191,16 @@ def lecturer_dashboard():
             student_id = request.form.get('student_id')
             student = User.query.get(student_id)
             if student and student.role == 'student':
-                db.session.delete(student)
-                db.session.commit()
-                flash(f'Student {student.name} deleted successfully!', 'success')
+                if student.registered_by == current_user.id:
+                    db.session.delete(student)
+                    db.session.commit()
+                    flash(f'Student {student.name} deleted successfully!', 'success')
+                else:
+                    flash('You are not authorized to delete this student.', 'danger')
 
     courses = current_user.courses
     sessions = Session.query.join(Course).filter(Course.lecturer_id == current_user.id).order_by(Session.date.desc()).all()
-    students = User.query.filter_by(role='student').all()
+    students = User.query.filter_by(role='student', registered_by=current_user.id).all()
     return render_template('lecturer_dashboard.html', courses=courses, sessions=sessions, students=students)
 
 @main.route('/student', methods=['GET', 'POST'])
