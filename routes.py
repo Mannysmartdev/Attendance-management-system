@@ -89,10 +89,13 @@ def admin_dashboard():
             from app import bcrypt
             hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
             new_user = User(username=username, password=hashed_pw, role=role, name=name, department=dept)
-            if role == 'student':
-                new_user.registered_by = current_user.id
             db.session.add(new_user)
             db.session.commit()
+            
+            if role == 'student':
+                current_user.registered_students.append(new_user)
+                db.session.commit()
+                
             flash(f'User {name} added!', 'success')
             
         elif action == 'add_course':
@@ -161,12 +164,21 @@ def lecturer_dashboard():
 
             existing = User.query.filter_by(username=username).first()
             if existing:
-                flash('A user with that Matric Number already exists.', 'danger')
+                if existing.role == 'student':
+                    if existing in current_user.registered_students:
+                        flash(f'Student {name} is already in your list.', 'info')
+                    else:
+                        current_user.registered_students.append(existing)
+                        db.session.commit()
+                        flash(f'Student {name} added to your list.', 'success')
+                else:
+                    flash('A non-student user with that Matric Number already exists.', 'danger')
             else:
                 from app import bcrypt
                 hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
-                new_student = User(username=username, password=hashed_pw, role='student', name=name, department=dept, registered_by=current_user.id)
+                new_student = User(username=username, password=hashed_pw, role='student', name=name, department=dept)
                 db.session.add(new_student)
+                current_user.registered_students.append(new_student)
                 db.session.commit()
 
                 # Handle optional photo upload for face encoding
@@ -181,26 +193,26 @@ def lecturer_dashboard():
                         new_student.photo_path = filename
                         new_student.face_encoding = json.dumps(encoding.tolist())
                         db.session.commit()
-                        flash(f'Student {name} registered with face enrolled!', 'success')
+                        flash(f'Student {name} registered with face enrolled and added to your list!', 'success')
                     else:
-                        flash(f'Student {name} registered but no face detected in photo.', 'warning')
+                        flash(f'Student {name} registered but no face detected. Added to your list.', 'warning')
                 else:
-                    flash(f'Student {name} registered successfully!', 'success')
+                    flash(f'Student {name} registered successfully and added to your list!', 'success')
 
         elif action == 'delete_student':
             student_id = request.form.get('student_id')
             student = User.query.get(student_id)
             if student and student.role == 'student':
-                if student.registered_by == current_user.id:
-                    db.session.delete(student)
+                if student in current_user.registered_students:
+                    current_user.registered_students.remove(student)
                     db.session.commit()
-                    flash(f'Student {student.name} deleted successfully!', 'success')
+                    flash(f'Student {student.name} removed from your list.', 'success')
                 else:
-                    flash('You are not authorized to delete this student.', 'danger')
+                    flash('You are not authorized to remove this student.', 'danger')
 
     courses = current_user.courses
     sessions = Session.query.join(Course).filter(Course.lecturer_id == current_user.id).order_by(Session.date.desc()).all()
-    students = User.query.filter_by(role='student', registered_by=current_user.id).all()
+    students = current_user.registered_students
     return render_template('lecturer_dashboard.html', courses=courses, sessions=sessions, students=students)
 
 @main.route('/student', methods=['GET', 'POST'])

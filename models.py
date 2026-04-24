@@ -18,11 +18,24 @@ class User(db.Model, UserMixin):
     photo_path = db.Column(db.String(200), nullable=True)
     face_encoding = db.Column(db.Text, nullable=True) # Store JSON string of 128-d array
     qr_code_path = db.Column(db.String(200), nullable=True)
-    registered_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     
     # Relationships
     courses = db.relationship('Course', backref='lecturer', cascade="all, delete-orphan", lazy=True)
     attendances = db.relationship('Attendance', backref='student', cascade="all, delete-orphan", lazy=True)
+    
+    # Many-to-Many student ownership
+    registered_students = db.relationship('User', 
+        secondary='student_ownership',
+        primaryjoin=('User.id == student_ownership.c.lecturer_id'),
+        secondaryjoin=('User.id == student_ownership.c.student_id'),
+        backref=db.backref('registrars', lazy=True),
+        lazy=True)
+
+# Association table for Many-to-Many student ownership
+student_ownership = db.Table('student_ownership',
+    db.Column('lecturer_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
+    db.Column('student_id', db.Integer, db.ForeignKey('users.id'), primary_key=True)
+)
 
 class Course(db.Model):
     __tablename__ = 'courses'
