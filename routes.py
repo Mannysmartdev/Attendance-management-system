@@ -290,14 +290,20 @@ def api_mark_face():
     import cv2
     import numpy as np
     
-    # Read image
+    # Read image — keep as BGR (OpenCV default), do NOT convert to RGB.
+    # This matches how DeepFace reads images from file paths during registration.
     in_memory_file = file.read()
-    nparr = np.fromstring(in_memory_file, np.uint8)
-    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    
+    nparr = np.frombuffer(in_memory_file, np.uint8)
+    frame_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    if frame_bgr is None:
+        return jsonify({'success': False, 'message': 'Could not decode the image'})
+
     # Extract face encodings from the webcam frame ONCE
-    live_encodings = face_utils.get_face_encodings(rgb_frame)
+    # Pass BGR frame directly — get_face_encodings_from_frame writes it to a
+    # temp file so DeepFace processes it via the exact same code path used
+    # during registration, guaranteeing consistent embeddings.
+    live_encodings = face_utils.get_face_encodings_from_frame(frame_bgr)
     if not live_encodings:
         return jsonify({'success': False, 'message': 'No face found in the image'})
         
@@ -323,7 +329,7 @@ def api_mark_face():
 
         distances = [cosine_distance(live_encoding, enc) for enc in known_encodings]
         best_match_index = np.argmin(distances)
-        if distances[best_match_index] <= 0.4:
+        if distances[best_match_index] <= 0.5:
             matched_student = student_list[best_match_index]
             
     if matched_student:
